@@ -3,6 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
+import { requireEnv } from "../config.ts";
 
 export interface CoachRequest<T> {
   system: string;
@@ -76,13 +77,66 @@ export class ClaudeCliModel implements CoachModel {
   }
 }
 
+const GeminiResponse = z.object({
+  candidates: z
+    .array(
+      z.object({
+        content: z.object({ parts: z.array(z.object({ text: z.string().optional() })) }).optional(),
+        finishReason: z.string().optional(),
+      }),
+    )
+    .optional(),
+  promptFeedback: z.object({ blockReason: z.string().optional() }).optional(),
+  usageMetadata: z.object({ promptTokenCount: z.number(), candidatesTokenCount: z.number() }).partial().optional(),
+});
+
+/**
+ * Google Gemini via its REST API. Opt-in for a fully free setup: on Gemini's free tier, Google may use
+ * prompts and responses to improve its products, and human reviewers may read them (see README).
+ */
+export class GeminiModel implements CoachModel {
+  constructor(
+    private readonly apiKey: string,
+    private readonly model: string,
+  ) {}
+
+  async generate<T>({ system, prompt, schema }: CoachRequest<T>): Promise<T> {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "x-goog-api-key": this.apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: "application/json", responseJsonSchema: jsonSchema(schema) },
+      }),
+    });
+    if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    const body = GeminiResponse.parse(await res.json());
+    const candidate = body.candidates?.[0];
+    const text = candidate?.content?.parts.map((p) => p.text ?? "").join("");
+    if (!text) {
+      const reason = body.promptFeedback?.blockReason ?? candidate?.finishReason ?? "unknown";
+      throw new Error(`Gemini returned no content (${reason})`);
+    }
+    const u = body.usageMetadata;
+    console.error(`[coach] ${this.model} via Gemini: ${u?.promptTokenCount ?? "?"} in / ${u?.candidatesTokenCount ?? "?"} out`);
+    return schema.parse(JSON.parse(text));
+  }
+}
+
+const DEFAULT_MODELS = { cli: "claude-opus-5", gemini: "gemini-3.8-flash" } as const;
+
 export function createCoachModel(): CoachModel {
-  const backend = process.env.COACH_BACKEND ?? "cli";
-  const model = process.env.COACH_MODEL ?? "claude-opus-5";
+  // `||` not `??`: GitHub Actions passes unset variables as empty strings.
+  const backend = process.env.COACH_BACKEND || "cli";
+  const model = (name: keyof typeof DEFAULT_MODELS) => process.env.COACH_MODEL || DEFAULT_MODELS[name];
   switch (backend) {
     case "cli":
-      return new ClaudeCliModel(model);
+      return new ClaudeCliModel(model("cli"));
+    case "gemini":
+      return new GeminiModel(requireEnv("GEMINI_API_KEY"), model("gemini"));
     default:
-      throw new Error(`Unknown COACH_BACKEND "${backend}" (supported: cli)`);
+      throw new Error(`Unknown COACH_BACKEND "${backend}" (supported: cli, gemini)`);
   }
 }

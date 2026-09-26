@@ -29,6 +29,7 @@ Constraints from intervals.icu:
 | Language / runtime | TypeScript, current Node LTS, run with `tsx` (no build) |
 | Libraries | `@anthropic-ai/sdk`, Zod, Vitest; plain `fetch` for HTTP |
 | Claude backend | PoC: Claude Pro plan via the `claude` CLI (local login; `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token` in Actions). Structured output via `--json-schema`, tools and MCP disabled. Behind a `CoachModel` interface so the API can replace it after the PoC |
+| Free alternative | Opt-in `COACH_BACKEND=gemini` (Gemini API via `fetch`, `responseJsonSchema` structured output) for a fully free setup. Not the default: on Gemini's free tier Google may use prompts/responses to improve its products and human reviewers may read them. Prompts are tuned for Claude; Gemini output quality is unverified |
 | Scheduling | GitHub Actions: poll every ~2h + Sunday-evening PT weekly cron |
 | State | Upstash Redis (REST) |
 | Notifications | Discord webhooks: `#run-log`, `#weekly-coach` |

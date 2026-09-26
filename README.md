@@ -71,10 +71,12 @@ Heart rate matters: the coach judges effort mainly by HR zones. A chest strap gi
 
 - A **GPS running watch** whose runs sync to intervals.icu directly (see [Supported watches](#supported-watches))
 - **Node.js 24+**
-- A **Claude Pro or Max plan** and the [Claude Code CLI](https://code.claude.com), used for coaching
+- For coaching, either:
+  - a **Claude Pro or Max plan** and the [Claude Code CLI](https://code.claude.com) (recommended), or
+  - a **Gemini API key** for a fully free setup, at your own risk (see [step 6](#6-coaching-model-claude-or-gemini))
 - Free accounts on **intervals.icu**, **Discord**, **Upstash** and **GitHub**
 
-The whole thing runs on free tiers plus the Claude plan you already have.
+With a Claude plan you already pay for, everything else runs on free tiers. With Gemini's free tier, it costs nothing at all.
 
 ### 1. Get the code
 
@@ -138,7 +140,16 @@ UPSTASH_REDIS_REST_URL=https://....upstash.io
 UPSTASH_REDIS_REST_TOKEN=...
 ```
 
-### 6. Claude
+### 6. Coaching model: Claude or Gemini
+
+| | Claude (default) | Gemini free tier (opt-in) |
+|---|---|---|
+| Cost | Included in a Claude Pro/Max plan | Free |
+| Your data | Handled under your Claude plan's terms and your privacy settings | **Google may use it to improve its products, and human reviewers may read it** |
+| Coaching quality | What the prompts were written and tested for | Untested; prompts were tuned for Claude |
+| Setting | `COACH_BACKEND=cli` | `COACH_BACKEND=gemini` |
+
+#### Option A: Claude (recommended)
 
 Locally, coaching runs through your logged-in `claude` CLI, so no API key is needed. Check that it works:
 
@@ -153,6 +164,23 @@ claude setup-token
 ```
 
 Keep it for step 8. Coaching calls count toward your plan's usage limits, but at about 5 calls a week the impact is small.
+
+#### Option B: Gemini free tier (at your own risk)
+
+> [!WARNING]
+> Under the [Gemini API terms](https://ai.google.dev/gemini-api/terms) for unpaid services, Google "uses the content you submit to the Services and any generated responses to provide, improve, and develop Google products and services and machine learning technologies," and "human reviewers may read, annotate, and process your API input and output." You must be 18 or older. (Users in the EEA, Switzerland and the UK get paid-tier data protections even on the free tier.)
+>
+> What gets sent is your run summaries (dates, distances, paces, heart rate, splits, weekly totals) and your 5K time: no GPS, no name, no account details. It's still your health data. Only choose this if you're comfortable with those terms.
+
+1. Create an API key at [Google AI Studio](https://aistudio.google.com/apikey).
+2. Add it to `.env`:
+
+   ```
+   COACH_BACKEND=gemini
+   GEMINI_API_KEY=...
+   ```
+
+The default model is `gemini-3.8-flash`; set `COACH_MODEL` to use another. On a paid Gemini plan, Google doesn't use your prompts or responses to improve its products.
 
 ### 7. Try it locally
 
@@ -171,7 +199,8 @@ The first real `poll` coaches only your most recent run and marks older runs as 
 
    | Secret | Value |
    |---|---|
-   | `CLAUDE_CODE_OAUTH_TOKEN` | the token from `claude setup-token` |
+   | `CLAUDE_CODE_OAUTH_TOKEN` | the token from `claude setup-token` (Claude option) |
+   | `GEMINI_API_KEY` | your Gemini key (Gemini option only) |
    | `INTERVALS_API_KEY` | from step 2 |
    | `INTERVALS_ATHLETE_ID` | from step 2 |
    | `ATHLETE_5K_TIME` | from step 3 |
@@ -179,6 +208,8 @@ The first real `poll` coaches only your most recent run and marks older runs as 
    | `DISCORD_WEBHOOK_WEEKLY_COACH` | from step 4 |
    | `UPSTASH_REDIS_REST_URL` | from step 5 |
    | `UPSTASH_REDIS_REST_TOKEN` | from step 5 |
+
+   **Using Gemini?** Also open the **Variables** tab and add a repository variable `COACH_BACKEND` = `gemini`. You can skip `CLAUDE_CODE_OAUTH_TOKEN`.
 
 2. **If you forked the repo**, open the **Actions** tab and enable workflows. GitHub turns them off on forks by default.
 3. Go to **Actions → Poll runs → Run workflow** to test it. A green run ending in "No new runs." means everything is connected.
@@ -245,7 +276,7 @@ docs/design.md      decisions and reasoning
 
 ## Limitations
 
-- **Proof of concept.** Coaching runs on a Claude subscription through the CLI. For a long-term setup, the Claude API (about $2/month at this volume) can replace it behind the same `CoachModel` interface in `src/coach/model.ts`.
+- **Proof of concept.** Coaching runs on a Claude subscription through the CLI (or on Gemini, if you opt in). For a long-term setup, the Claude API (about $2/month at this volume) can be added behind the same `CoachModel` interface in `src/coach/model.ts`.
 - **Strength and yoga aren't tracked.** The coach plans them but can't see whether they happened.
 - **Wrist heart rate is noisy.** HR drift is only calculated on runs of 25 minutes or more.
 - **The setup token expires after a year.** Run `claude setup-token` again and update the secret.
