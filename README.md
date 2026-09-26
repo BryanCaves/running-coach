@@ -1,6 +1,6 @@
 # running-coach
 
-A personal AI running coach that reads your watch data, works out what it means, and posts real coaching to a private Discord server.
+A personal AI running coach that reads your watch data (Garmin, COROS, Polar and others, via [intervals.icu](https://intervals.icu)), works out what it means, and posts real coaching to a private Discord server.
 
 Instead of repeating stats your watch already shows ("3.2 mi, 10:33/mi, avg HR 175"), it tells you what they mean and what to do next:
 
@@ -25,7 +25,7 @@ Each post has a color bar: 🟢 on track, 🟡 watch this, 🔴 back off.
 ## How it works
 
 ```
-Garmin watch ──► Garmin Connect ──► intervals.icu ──► running-coach (GitHub Actions)
+Your watch ────► its app/cloud ───► intervals.icu ──► running-coach (GitHub Actions)
                                                           │
                           metrics computed in code ◄──────┤  splits, HR drift, easy-zone time,
                                                           │  weekly ramp, VDOT training paces
@@ -46,15 +46,30 @@ Design decisions and their reasons are in [docs/design.md](docs/design.md).
 
 ## Why intervals.icu and not Strava?
 
-Strava's API agreement prohibits using Strava data in AI applications, and Garmin's own API is only open to businesses. [intervals.icu](https://intervals.icu) is free, syncs directly from Garmin Connect, gives you a personal API key for your own data, and its API terms allow this kind of use.
+Strava's API agreement prohibits using Strava data in AI applications, and Garmin's own API is only open to businesses. [intervals.icu](https://intervals.icu) is free, syncs from most watch platforms, gives you a personal API key for your own data, and its API terms allow this kind of use.
 
-**Connect Garmin to intervals.icu directly.** Activities that reach intervals.icu *through Strava* are blocked from its API.
+## Supported watches
+
+Any watch whose runs reach intervals.icu **through a direct connection** should work. The coach only needs distance, time, heart rate and speed, which every GPS running watch records.
+
+| Watch | How runs get into intervals.icu |
+|---|---|
+| Garmin | Direct connection to Garmin Connect. **Tested** (Forerunner 165). |
+| COROS, Polar, Suunto, Amazfit, Huawei, Wahoo | intervals.icu lists integrations for these; use the direct connection where one is offered. Untested here. |
+| Apple Watch | Through a bridge app such as HealthFit or RunGap. Untested here. |
+| Anything else | Upload FIT files (manually or via Dropbox). Untested here. |
+
+**Runs must not come in through Strava.** Activities that reach intervals.icu via Strava are blocked from its API, so the coach can't see them. If your watch only syncs to intervals.icu through Strava, it won't work.
+
+To check your setup, open a recent run in intervals.icu and confirm its source is your watch's platform, not Strava. Then run `npm run coach -- spike` (step 7 below): your recent runs should all be listed. If some are missing or the command errors, check those runs' source.
+
+Heart rate matters: the coach judges effort mainly by HR zones. A chest strap gives the cleanest data, but wrist HR works.
 
 ## Set it up for yourself
 
 ### What you need
 
-- A **Garmin watch** synced to Garmin Connect. Other devices that sync directly to intervals.icu may work but are untested.
+- A **GPS running watch** whose runs sync to intervals.icu directly (see [Supported watches](#supported-watches))
 - **Node.js 24+**
 - A **Claude Pro or Max plan** and the [Claude Code CLI](https://code.claude.com), used for coaching
 - Free accounts on **intervals.icu**, **Discord**, **Upstash** and **GitHub**
@@ -77,7 +92,7 @@ Fill in `.env` as you go through the steps below. It's git-ignored, so never com
 ### 2. intervals.icu (your run data)
 
 1. Create an account at [intervals.icu](https://intervals.icu).
-2. Under **Settings → Connections**, connect **Garmin Connect**. Don't connect Strava (see above).
+2. Under **Settings → Connections**, connect your watch's platform (e.g. Garmin Connect, COROS, Polar). Don't use Strava as the source (see [Supported watches](#supported-watches)).
 3. Check that your recent runs appear.
 4. Under **Settings → Developer Settings**, generate an API key and note your athlete ID.
 
@@ -211,7 +226,7 @@ This repo is meant to be public, so it's built to keep your data out of it:
 - Workflow logs, which are public on public repos, only show activity IDs and token counts, never your pace, heart rate or distance.
 - GPS data is never downloaded. The app only requests time, distance, heart rate and speed streams, and drops every activity field it doesn't use.
 - Workflows only run on a schedule or when you trigger them by hand, never on pull requests, so forks can't reach your secrets.
-- Discord posts credit Garmin as the data source, which Garmin's terms require.
+- Discord posts name the recording device (e.g. "Garmin Forerunner 165"), which covers Garmin's attribution requirement. Garmin is the only brand whose data terms have been checked; if you use another brand, check its terms for AI use yourself.
 
 ## Project layout
 
