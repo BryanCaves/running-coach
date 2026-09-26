@@ -1,0 +1,28 @@
+{
+  "name": "running-coach",
+  "version": "1.0.0",
+  "description": "Personal AI running coach: Garmin data via intervals.icu, coaching by Claude, posted to Discord.",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "coach": "tsx src/cli.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github-personal:BryanCaves/running-coach.git"
+  },
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

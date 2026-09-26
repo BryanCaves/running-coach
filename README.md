@@ -1,2 +1,13 @@
 # running-coach
-Running coach that summarizes runs, gives a weekly summary, and other coaching based on Strava stats. Posted to private Discord each with it's own channel.
+
+Personal AI running coach. Garmin run data (via intervals.icu) → computed training signals → coaching from Claude → private Discord (`#run-log` after each run, `#weekly-coach` on Sundays).
+
+See [docs/design.md](docs/design.md) for decisions and architecture.
+
+## Setup
+
+```sh
+npm install
+cp .env.example .env   # fill in values
+npm run coach -- <command>
+```
