@@ -11,3 +11,14 @@ npm install
 cp .env.example .env   # fill in values
 npm run coach -- <command>
 ```
+
+## Commands
+
+- `npm run coach -- spike [weeks]`: print recent run metrics locally
+- `npm run coach -- poll [--dry-run]`: coach new runs and post to `#run-log` (`--dry-run` prints instead of posting)
+- `npm run coach -- preview [--dry-run]`: re-coach the latest run and post it without marking it posted (for testing the format)
+
+## GitHub Actions secrets
+
+`CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`), `INTERVALS_API_KEY`, `INTERVALS_ATHLETE_ID`, `ATHLETE_5K_TIME`, `DISCORD_WEBHOOK_RUN_LOG`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`.
+

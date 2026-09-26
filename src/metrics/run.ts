@@ -8,6 +8,7 @@ const EASY_ZONE_COUNT = 2;
 export interface RunSummary {
   id: string;
   date: string; // local YYYY-MM-DD
+  device: string | null;
   miles: number;
   movingSec: number;
   paceSecPerMile: number;
@@ -31,6 +32,7 @@ export function summarizeRun(a: Activity, s: Streams): RunSummary {
   return {
     id: a.id,
     date: a.start_date_local.slice(0, 10),
+    device: a.device_name ?? null,
     miles: toMiles(a.distance),
     movingSec: a.moving_time,
     paceSecPerMile: paceSecPerMile(speed),

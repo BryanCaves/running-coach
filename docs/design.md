@@ -6,7 +6,7 @@ Personal AI running coach. Pulls run data, computes coaching signals in code, ha
 
 - Current: 5K under 30:00
 - Next: 10K, then half marathon
-- Hybrid week: 2 strength days (upper/lower) + 2–3 runs; hard runs placed away from leg day
+- Hybrid week: 3–4 runs + at least 3 strength days (2 upper, 1 lower/legs), with occasional yoga; hard runs placed away from leg day
 - Device: Garmin Forerunner 165 (wrist HR)
 
 ## Data source
@@ -28,6 +28,7 @@ Constraints from intervals.icu:
 |---|---|
 | Language / runtime | TypeScript, current Node LTS, run with `tsx` (no build) |
 | Libraries | `@anthropic-ai/sdk`, Zod, Vitest; plain `fetch` for HTTP |
+| Claude backend | PoC: Claude Pro plan via the `claude` CLI (local login; `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token` in Actions). Structured output via `--json-schema`, tools and MCP disabled. Behind a `CoachModel` interface so the API can replace it after the PoC |
 | Scheduling | GitHub Actions: poll every ~2h + Sunday-evening PT weekly cron |
 | State | Upstash Redis (REST) |
 | Notifications | Discord webhooks: `#run-log`, `#weekly-coach` |

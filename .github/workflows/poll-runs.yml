@@ -1,0 +1,37 @@
+name: Poll runs
+
+# Never runs on pull requests: secrets must not be reachable from forks.
+on:
+  schedule:
+    - cron: "7 */2 * * *" # every 2 hours
+  workflow_dispatch:
+
+concurrency:
+  group: poll-runs
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Claude Code CLI runs coaching on the Claude Pro plan (PoC). Pinned for reproducibility.
+      - run: npm install -g @anthropic-ai/claude-code@2.1.283
+      - run: npm run coach -- poll
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          INTERVALS_API_KEY: ${{ secrets.INTERVALS_API_KEY }}
+          INTERVALS_ATHLETE_ID: ${{ secrets.INTERVALS_ATHLETE_ID }}
+          ATHLETE_5K_TIME: ${{ secrets.ATHLETE_5K_TIME }}
+          DISCORD_WEBHOOK_RUN_LOG: ${{ secrets.DISCORD_WEBHOOK_RUN_LOG }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
