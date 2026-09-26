@@ -1,22 +1,33 @@
 import { requireEnv } from "./config.ts";
 import { createCoachModel } from "./coach/model.ts";
 import { coachRun, postRunEmbed } from "./coach/postRun.ts";
+import { coachWeek, weeklyEmbeds } from "./coach/weekly.ts";
 import { IntervalsClient } from "./intervals/client.ts";
 import type { Activity } from "./intervals/types.ts";
 import { summarizeRun, type RunSummary } from "./metrics/run.ts";
 import { formatDuration, formatPace } from "./metrics/units.ts";
 import { trainingPaces, vdot, type TrainingPaces } from "./metrics/vdot.ts";
-import { addDays, summarizeWeeks, weekStart } from "./metrics/week.ts";
+import { addDays, localToday, summarizeWeeks, weekStart } from "./metrics/week.ts";
 import { postToDiscord, type Embed } from "./notify/discord.ts";
-import { Redis, RunLog } from "./store/redis.ts";
+import { compareWeek } from "./plan/compare.ts";
+import { limitsFrom } from "./plan/rules.ts";
+import { DAYS } from "./plan/schema.ts";
+import { PlanStore, Redis, RunLog } from "./store/redis.ts";
 
 const RUN_TYPES = new Set(["Run", "TrailRun", "VirtualRun"]);
 const HISTORY_WEEKS = 5;
 // Runs older than this are never coached, even if unposted (e.g. a late Garmin sync of old data).
 const NEW_RUN_DAYS = 3;
 
-const today = () => new Date().toISOString().slice(0, 10);
+// Dates are in the athlete's time zone: Actions runs in UTC, and Sunday evening PT is Monday in UTC.
+const today = () => localToday();
+// 10K phase gate from docs/design.md.
+const TEN_K_GATE_MILES = 6;
 const isRun = (a: Activity) => RUN_TYPES.has(a.type);
+
+function redis() {
+  return new Redis(requireEnv("UPSTASH_REDIS_REST_URL"), requireEnv("UPSTASH_REDIS_REST_TOKEN"));
+}
 
 function intervalsClient() {
   return new IntervalsClient(requireEnv("INTERVALS_API_KEY"), requireEnv("INTERVALS_ATHLETE_ID"));
@@ -58,10 +69,17 @@ async function loadContext(): Promise<Context> {
 async function coachRuns(ctx: Context, targetIds: Set<string>, send: (run: RunSummary, embed: Embed) => Promise<void>) {
   const runs = await summarize(ctx.client, ctx.activities);
   const model = createCoachModel();
+  const plans = new PlanStore(redis());
   for (const run of runs.filter((r) => targetIds.has(r.id))) {
     const earlier = runs.filter((r) => r.date <= run.date && r.id !== run.id);
+    const weekPlan = await plans.get(weekStart(run.date));
+    const dayIndex = (new Date(`${run.date}T12:00:00Z`).getUTCDay() + 6) % 7;
     const coaching = await coachRun(model, {
       run,
+      plan: weekPlan && {
+        focus: weekPlan.focus,
+        plannedToday: weekPlan.days.find((d) => d.day === DAYS[dayIndex])?.sessions.filter((s) => s.type !== "rest") ?? [],
+      },
       recentRuns: earlier.slice(-8),
       weeks: summarizeWeeks([...earlier, run], ctx.firstWeek, weekStart(run.date)),
       paces: ctx.paces,
@@ -75,7 +93,7 @@ const printEmbed = async (_: RunSummary, embed: Embed) => console.log(JSON.strin
 
 async function poll({ dryRun }: { dryRun: boolean }) {
   const ctx = await loadContext();
-  const log = new RunLog(new Redis(requireEnv("UPSTASH_REDIS_REST_URL"), requireEnv("UPSTASH_REDIS_REST_TOKEN")));
+  const log = new RunLog(redis());
   const posted = await log.posted(ctx.activities.map((a) => a.id));
   const cutoff = addDays(today(), -NEW_RUN_DAYS);
   let pending = ctx.activities.filter((a) => !posted.has(a.id) && a.start_date_local >= cutoff);
@@ -112,6 +130,49 @@ async function preview({ dryRun }: { dryRun: boolean }) {
     await postToDiscord(requireEnv("DISCORD_WEBHOOK_RUN_LOG"), [embed]);
     console.log(`Posted preview for activity ${run.id}.`);
   });
+}
+
+/** Sunday review: recap this week against its plan, then plan and store next week. */
+async function weekly({ dryRun, force }: { dryRun: boolean; force: boolean }) {
+  const ctx = await loadContext();
+  const reviewed = weekStart(today());
+  const store = new PlanStore(redis());
+  if (!dryRun && !force && (await store.reviewPosted(reviewed))) {
+    console.log(`Weekly review for ${reviewed} already posted.`);
+    return;
+  }
+
+  const runs = await summarize(ctx.client, ctx.activities);
+  const weeks = summarizeWeeks(runs, ctx.firstWeek, reviewed);
+  const plan = await store.get(reviewed);
+  const recent = weeks.slice(-4);
+  const longest = Math.max(0, ...recent.map((w) => w.longestMiles));
+  const input = {
+    weekStart: reviewed,
+    plan,
+    comparison: plan && compareWeek(plan, reviewed, runs, today()),
+    runs: runs.filter((r) => weekStart(r.date) === reviewed),
+    weeks,
+    paces: ctx.paces,
+    recent5k: ctx.recent5k,
+    hrZones: runs.findLast((r) => r.hrZones)?.hrZones ?? null,
+    phase: {
+      name: "Base building → 10K",
+      nextGate: `long run ${TEN_K_GATE_MILES} mi (recent best ${longest.toFixed(1)} mi)`,
+    },
+    limits: limitsFrom(recent.map((w) => w.miles), longest),
+  };
+
+  const coaching = await coachWeek(createCoachModel(), input);
+  const embeds = weeklyEmbeds(input, coaching);
+  if (dryRun) {
+    console.log(JSON.stringify(embeds, null, 2));
+    return;
+  }
+  await postToDiscord(requireEnv("DISCORD_WEBHOOK_WEEKLY_COACH"), embeds);
+  await store.set(addDays(reviewed, 7), coaching.nextWeek);
+  await store.markReviewPosted(reviewed);
+  console.log(`Posted weekly review for ${reviewed} and saved next week's plan.`);
 }
 
 async function spike(weeks: number) {
@@ -164,10 +225,13 @@ switch (command) {
   case "preview":
     await preview({ dryRun: args.includes("--dry-run") });
     break;
+  case "weekly":
+    await weekly({ dryRun: args.includes("--dry-run"), force: args.includes("--force") });
+    break;
   case "spike":
     await spike(Number(args[0] ?? 4));
     break;
   default:
-    console.log("Usage: npm run coach -- <poll [--dry-run] | preview [--dry-run] | spike [weeks]>");
+    console.log("Usage: npm run coach -- <poll [--dry-run] | preview [--dry-run] | weekly [--dry-run] [--force] | spike [weeks]>");
     process.exitCode = 1;
 }

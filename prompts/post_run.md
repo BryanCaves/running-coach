@@ -21,7 +21,8 @@ Keep hard runs away from leg day (not the day before or after). Easy runs and yo
 
 ## How to judge the run
 
-- If there is no training plan yet, judge the run against the targets provided. Assume a run was meant to be easy unless the data clearly shows a structured workout.
+- If a planned workout is given for this day, judge the run against its purpose and targets (distance, HR target, pace guide). A run at ≥75% of planned distance counts as completed.
+- If there is no plan, judge the run against the targets provided. Assume a run was meant to be easy unless the data clearly shows a structured workout.
 - Compare against the recent runs and weeks: is this a pattern or a one-off?
 - Each pace comes labeled with its intensity (easy / moderate / threshold / faster than threshold). Use those labels; don't compare pace numbers yourself.
 - You only see the data window given. Don't make claims about history outside it ("ever", "always").

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { WeekPlan } from "../plan/schema.ts";
 
 const Reply = z.object({ result: z.unknown().optional(), error: z.string().optional() });
 
@@ -39,5 +40,30 @@ export class RunLog {
 
   async markPosted(...ids: string[]): Promise<void> {
     if (ids.length) await this.redis.command("SADD", POSTED_RUNS, ...ids);
+  }
+}
+
+const planKey = (weekStart: string) => `plan:week:${weekStart}`;
+const WEEKLY_POSTED = "weekly:posted";
+
+/** Weekly plans keyed by their Monday, plus which weekly reviews were posted. */
+export class PlanStore {
+  constructor(private readonly redis: Redis) {}
+
+  async get(weekStart: string): Promise<WeekPlan | null> {
+    const raw = await this.redis.command("GET", planKey(weekStart));
+    return typeof raw === "string" ? WeekPlan.parse(JSON.parse(raw)) : null;
+  }
+
+  async set(weekStart: string, plan: WeekPlan): Promise<void> {
+    await this.redis.command("SET", planKey(weekStart), JSON.stringify(plan));
+  }
+
+  async reviewPosted(weekStart: string): Promise<boolean> {
+    return (await this.redis.command("SISMEMBER", WEEKLY_POSTED, weekStart)) === 1;
+  }
+
+  async markReviewPosted(weekStart: string): Promise<void> {
+    await this.redis.command("SADD", WEEKLY_POSTED, weekStart);
   }
 }

@@ -14,6 +14,8 @@ export interface RunSummary {
   paceSecPerMile: number;
   avgHr: number | null;
   easyCeilingHr: number | null;
+  /** Upper bound (bpm) of each HR zone, Z1 first. */
+  hrZones: number[] | null;
   /** Share of HR-recorded time spent in Z1–Z2. */
   easyPct: number | null;
   load: number | null;
@@ -38,6 +40,7 @@ export function summarizeRun(a: Activity, s: Streams): RunSummary {
     paceSecPerMile: paceSecPerMile(speed),
     avgHr: a.average_heartrate ?? null,
     easyCeilingHr: a.icu_hr_zones?.[EASY_ZONE_COUNT - 1] ?? null,
+    hrZones: a.icu_hr_zones ?? null,
     easyPct: zoneTotal ? easyTime / zoneTotal : null,
     load: a.icu_training_load ?? null,
     splits: mileSplits(s),

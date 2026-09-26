@@ -5,6 +5,7 @@ import { formatDuration, formatPace } from "../metrics/units.ts";
 import { paceIntensity, type TrainingPaces } from "../metrics/vdot.ts";
 import type { WeekSummary } from "../metrics/week.ts";
 import type { Embed } from "../notify/discord.ts";
+import type { Session } from "../plan/schema.ts";
 import type { CoachModel } from "./model.ts";
 
 export const PostRunCoaching = z.object({
@@ -26,6 +27,8 @@ export type PostRunCoaching = z.infer<typeof PostRunCoaching>;
 
 export interface PostRunInput {
   run: RunSummary;
+  /** This week's plan and the sessions planned for the run's day, when a plan exists. */
+  plan: { focus: string; plannedToday: Session[] } | null;
   recentRuns: RunSummary[];
   weeks: WeekSummary[];
   paces: TrainingPaces;
@@ -49,9 +52,13 @@ function describeRun(r: RunSummary, p: TrainingPaces) {
   };
 }
 
-export function buildPostRunPrompt({ run, recentRuns, weeks, paces, recent5k }: PostRunInput): string {
+export function buildPostRunPrompt({ run, plan, recentRuns, weeks, paces, recent5k }: PostRunInput): string {
   const context = {
-    phase: "Pre-plan base building (no structured plan yet)",
+    phase: plan ? "Base building, following a weekly plan" : "Pre-plan base building (no structured plan yet)",
+    weekFocus: plan?.focus,
+    plannedToday: plan
+      ? plan.plannedToday.length ? plan.plannedToday : "Nothing planned for this day (an extra run)."
+      : undefined,
     dataWindow: `Only runs since ${weeks[0]?.weekStart ?? run.date} are included; earlier history is unknown.`,
     targets: {
       easyHrCeiling: run.easyCeilingHr,

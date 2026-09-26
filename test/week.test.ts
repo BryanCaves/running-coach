@@ -5,7 +5,7 @@ import { summarizeWeeks, weekStart } from "../src/metrics/week.ts";
 function run(date: string, miles: number, easyPct: number | null = null): RunSummary {
   return {
     id: date, date, device: null, miles, movingSec: miles * 600, paceSecPerMile: 600, avgHr: 150,
-    easyCeilingHr: 153, easyPct, load: 10, splits: [], pattern: "even", drift: null, efficiency: null,
+    easyCeilingHr: 153, hrZones: null, easyPct, load: 10, splits: [], pattern: "even", drift: null, efficiency: null,
   };
 }
 

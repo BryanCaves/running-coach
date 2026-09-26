@@ -36,7 +36,8 @@ Constraints from intervals.icu:
 | Progression | Phases advance by gates (long-run milestones); an optional race date makes the plan work backward from it |
 | Plan changes | Small changes auto-apply (repeat a week, ±mileage tweaks); phase changes or big cuts are posted as suggestions to approve |
 | "Completed" run | ≥75% of planned distance = completed; less = partial (noted, not failed) |
-| Weekly post | One Discord message, two embeds (recap + next week) |
+| Weekly post | One Discord message, two embeds (recap + next week); split into two messages only if over Discord's 6000-char limit |
+| Planning | Rolling weekly plan: each Sunday the coach reviews the week against its plan and writes next week (all 7 days: runs, strength, yoga), stored in Upstash. Code enforces the rules (3–4 runs, ≥2 upper + 1 lower, no hard run beside leg day, runs ≥1.5 mi, ramp ≤ max(+10%, +1.5 mi) over the recent peak week, long run ≤ recent longest +1 mi); a plan that breaks them is sent back once with the violations. A full phased plan can come later |
 
 Wrist HR is fine for trends, but drift math skips the first 5 minutes (optical HR lag) and needs 20+ minutes after that; short-run HR swings of ±20 bpm at steady pace are sensor noise, not physiology.
 

@@ -13,6 +13,11 @@ export interface WeekSummary {
   rampPct: number | null;
 }
 
+/** Today's date (YYYY-MM-DD) in the athlete's time zone. Actions runs in UTC. */
+export function localToday(timeZone = process.env.ATHLETE_TZ ?? "America/Los_Angeles"): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone });
+}
+
 /** Monday of the week containing a local YYYY-MM-DD date. */
 export function weekStart(date: string): string {
   const d = new Date(`${date}T00:00:00Z`);
