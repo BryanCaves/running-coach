@@ -61,7 +61,7 @@ Any watch whose runs reach intervals.icu **through a direct connection** should 
 
 **Runs must not come in through Strava.** Activities that reach intervals.icu via Strava are blocked from its API, so the coach can't see them. If your watch only syncs to intervals.icu through Strava, it won't work.
 
-To check your setup, open a recent run in intervals.icu and confirm its source is your watch's platform, not Strava. Then run `npm run coach -- spike` (step 7 below): your recent runs should all be listed. If some are missing or the command errors, check those runs' source.
+To check your setup, open a recent run in intervals.icu and confirm its source is your watch's platform, not Strava. Then run `npm run coach -- spike` (step 7 below): your recent runs should all be listed. If it prints "Skipped N activities without usable data", those runs came in through Strava; reconnect your watch's platform directly.
 
 Heart rate matters: the coach judges effort mainly by HR zones. A chest strap gives the cleanest data, but wrist HR works.
 

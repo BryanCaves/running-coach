@@ -20,6 +20,10 @@ export interface Embed {
   footer: string;
 }
 
+/** Footer credit naming the recording device; Garmin's API terms require attribution. */
+export const dataCredit = (device: string | null | undefined) =>
+  device ? `Data: ${device} via intervals.icu` : "Data: intervals.icu";
+
 // Discord embed limits.
 const clip = (s: string, max: number) => (s.length > max ? s.slice(0, max - 1) + "…" : s);
 

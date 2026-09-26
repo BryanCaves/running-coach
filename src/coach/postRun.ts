@@ -4,7 +4,7 @@ import type { RunSummary } from "../metrics/run.ts";
 import { formatDuration, formatPace } from "../metrics/units.ts";
 import { paceIntensity, type TrainingPaces } from "../metrics/vdot.ts";
 import type { WeekSummary } from "../metrics/week.ts";
-import type { Embed } from "../notify/discord.ts";
+import { dataCredit, type Embed } from "../notify/discord.ts";
 import type { Session } from "../plan/schema.ts";
 import type { CoachModel } from "./model.ts";
 
@@ -132,7 +132,6 @@ export function postRunEmbed(run: RunSummary, coaching: PostRunCoaching): Embed 
     description: `**${STATUS_LABEL[coaching.status]}**\n${coaching.headline}`,
     status: coaching.status,
     fields: [...glance, ...points],
-    // Garmin's API terms require attribution on anything derived from Garmin data.
-    footer: `Data: ${run.device ?? "Garmin"} via intervals.icu`,
+    footer: dataCredit(run.device),
   };
 }

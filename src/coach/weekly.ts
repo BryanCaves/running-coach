@@ -4,7 +4,7 @@ import type { RunSummary } from "../metrics/run.ts";
 import { formatPace } from "../metrics/units.ts";
 import { paceIntensity, type TrainingPaces } from "../metrics/vdot.ts";
 import { addDays, type WeekSummary } from "../metrics/week.ts";
-import type { Embed } from "../notify/discord.ts";
+import { dataCredit, type Embed } from "../notify/discord.ts";
 import type { WeekComparison } from "../plan/compare.ts";
 import { checkWeekPlan, type RuleLimits } from "../plan/rules.ts";
 import { isRun, WeekPlan, type Session } from "../plan/schema.ts";
@@ -142,8 +142,8 @@ export function weeklyEmbeds(input: WeeklyInput, coaching: WeeklyCoaching): Embe
   const c = input.comparison;
   const planned = c?.planned ?? [];
   const done = planned.filter((p) => p.outcome === "completed").length;
-  const device = input.runs.find((r) => r.device)?.device ?? "Garmin";
-  const footer = `Phase: ${input.phase.name} · Next gate: ${input.phase.nextGate} · Data: ${device} via intervals.icu`;
+  const credit = dataCredit(input.runs.find((r) => r.device)?.device);
+  const footer = `Phase: ${input.phase.name} · Next gate: ${input.phase.nextGate} · ${credit}`;
 
   const wins = coaching.flags.filter((f) => f.kind === "win").map((f) => `✅ ${f.text}`);
   const warnings = coaching.flags.filter((f) => f.kind === "warning").map((f) => `⚠️ ${f.text}`);
